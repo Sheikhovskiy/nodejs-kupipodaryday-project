@@ -1,4 +1,11 @@
-import { IsEmail, Length, IsOptional, IsString } from 'class-validator';
+import {
+  IsEmail,
+  Length,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsDate,
+} from 'class-validator';
 
 export class SignupUserResponse {
   id: number;
@@ -11,6 +18,7 @@ export class SignupUserResponse {
   @Length(1, 200)
   about: string;
 
+  @IsUrl()
   @IsOptional()
   avatar: string;
 
@@ -18,7 +26,9 @@ export class SignupUserResponse {
   @IsEmail()
   email: string;
 
+  @IsDate()
   createdAt: Date;
 
+  @IsDate()
   updatedAt: Date;
 }

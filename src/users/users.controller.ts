@@ -2,12 +2,10 @@ import {
   Body,
   Controller,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
   Req,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -19,8 +17,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { WishesService } from '../wishes/wishes.service';
 import { WishesMapper } from '../wishes/dto/wishes.mapper';
 import { FindUsersDto } from './dto/find-users.dto';
-import { FindOptionsWhere } from 'typeorm';
-import { Wish } from '../wishes/entities/wish.entity';
 import { ResponseWishDto } from '../wishes/dto/response-wish.dto';
 
 @Controller('users')
@@ -33,23 +29,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('/me')
   async getMe(@Req() req: CustomRequest): Promise<UserProfileResponseDto> {
-    if (!req.user?.id)
-      throw new UnauthorizedException(`Пользователь не найден`);
-
-    const user = await this.usersService.findOne({
-      where: { id: parseInt(req.user.id) },
-      relations: [
-        'wishes',
-        'wishes.owner',
-        'offers',
-        'offers.item',
-        'wishlists',
-      ],
-    });
-
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден в базе данных');
-    }
+    const user = await this.usersService.getMe(req);
 
     return UsersMapper.fromUserToUserProfileResponse(user);
   }
@@ -59,42 +39,16 @@ export class UsersController {
   async updateProfile(
     @Req() req: CustomRequest,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<UserProfileResponseDto | undefined> {
-    if (!req.user?.id) return;
+  ): Promise<UserProfileResponseDto> {
+    const user = await this.usersService.updateProfile(req, updateUserDto);
 
-    await this.usersService.updateOne(
-      { id: parseInt(req.user.id) },
-      updateUserDto,
-    );
-
-    const updatedUser = await this.usersService.findOne({
-      where: { id: parseInt(req.user.id) },
-    });
-
-    if (!updatedUser) {
-      throw new NotFoundException(`Пользователь не найден`);
-    }
-
-    return UsersMapper.fromUserToUserProfileResponse(updatedUser);
+    return UsersMapper.fromUserToUserProfileResponse(user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('/me/wishes')
   async getMyWishes(@Req() req: CustomRequest): Promise<ResponseWishDto[]> {
-    if (!req.user?.id)
-      throw new UnauthorizedException(`Пользователь не найден`);
-
-    const userId =
-      typeof req.user?.id === 'string' ? parseInt(req.user.id) : req.user.id;
-
-    const where: FindOptionsWhere<Wish> = {
-      owner: { id: userId },
-    };
-
-    const wishes = await this.wishesService.findAll({
-      where,
-      relations: ['owner', 'offers', 'offers.user', 'offers.item'],
-    });
+    const wishes = await this.usersService.getMyWishes(req);
 
     return WishesMapper.fromWishListToResponseWishListDto(wishes ? wishes : []);
   }
@@ -102,13 +56,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get(':username')
   async getUsername(@Param('username') username: string) {
-    const user = await this.usersService.findOne({
-      where: { username: username },
-    });
-
-    if (!user) {
-      throw new NotFoundException(`Пользователь не найден`);
-    }
+    const user = await this.usersService.getByUsername(username);
 
     return UsersMapper.fromUserToUserPublicProfileResponseDto(user);
   }
@@ -116,9 +64,8 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get(':username/wishes')
   async getUserWishes(@Param('username') username: string) {
-    const wishes = await this.wishesService.findAll({
-      where: { owner: { username: username } },
-    });
+    const wishes = await this.usersService.getUserWishes(username);
+
     return WishesMapper.fromWishListToUserWishListDto(wishes);
   }
 
@@ -128,18 +75,7 @@ export class UsersController {
     @Req() req: CustomRequest,
     @Body() findUsersDto: FindUsersDto,
   ) {
-    const query = findUsersDto.query;
-
-    if (query.includes('@')) {
-      const user = await this.usersService.findOne({ where: { email: query } });
-      return UsersMapper.fromUserListToUserProfileResponseListDto(
-        user ? [user] : [],
-      );
-    }
-
-    const users = await this.usersService.findMany({
-      where: { username: query },
-    });
+    const users = await this.usersService.findByQuery(findUsersDto);
     return UsersMapper.fromUserListToUserProfileResponseListDto(users);
   }
 }

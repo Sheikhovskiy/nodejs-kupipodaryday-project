@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   FindManyOptions,
   FindOptionsWhere,
@@ -10,6 +14,7 @@ import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { Wishlist } from './entities/wishlist.entity';
 import { User } from '../users/entities/user.entity';
+import { CustomRequest } from '../users/CustomRequest';
 
 @Injectable()
 export class WishlistsService {
@@ -21,9 +26,14 @@ export class WishlistsService {
   ) {}
 
   async create(
+    req: CustomRequest,
     createWishlistDto: CreateWishlistDto,
-    userId: number,
   ): Promise<Wishlist> {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+    const userId = parseInt(req.user.id);
+
     const owner = await this.userRepository.findOne({
       where: { id: userId },
     });
@@ -38,6 +48,64 @@ export class WishlistsService {
     });
 
     return await this.wishlistRepository.save(wishlist);
+  }
+
+  async getUserWishlist(req: CustomRequest): Promise<Wishlist[]> {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+
+    return await this.wishlistRepository.find({
+      where: { owner: { id: parseInt(req.user.id) } },
+      relations: ['owner', 'items'],
+    });
+  }
+
+  async update(
+    req: CustomRequest,
+    id: string,
+    updateWishlistDto: UpdateWishlistDto,
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+
+    const wishlist = await this.wishlistRepository.findOne({
+      where: { id: parseInt(id) },
+    });
+    if (!wishlist) return;
+
+    if (wishlist.owner.id !== parseInt(req.user.id)) return;
+
+    const updateQuery: FindOptionsWhere<Wishlist> = {
+      id: parseInt(req.user.id),
+    };
+
+    return await this.wishlistRepository.update(updateQuery, updateWishlistDto);
+  }
+
+  async delete(req: CustomRequest, id: string) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+
+    const wishlist = await this.wishlistRepository.findOne({
+      where: {
+        id: parseInt(id),
+        owner: { id: parseInt(req.user.id) },
+      },
+    });
+
+    if (!wishlist) {
+      throw new NotFoundException(`Список пожеланий с id: ${id} не найден`);
+    }
+
+    const deleteQuery: FindOptionsWhere<Wishlist> = {
+      id: parseInt(id),
+      owner: { id: parseInt(req.user.id) },
+    };
+
+    return await this.wishlistRepository.delete(deleteQuery);
   }
 
   async findOne(query: FindManyOptions<Wishlist>): Promise<Wishlist | null> {

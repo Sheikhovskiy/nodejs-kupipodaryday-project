@@ -1,5 +1,8 @@
-// auth/jwt.strategy.ts
-import { ExtractJwt, Strategy, StrategyOptions } from 'passport-jwt';
+import {
+  ExtractJwt,
+  Strategy,
+  StrategyOptionsWithoutRequest,
+} from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,14 +14,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private configService: ConfigService,
     private usersService: UsersService,
   ) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
+    const secretOrKey = configService.get<string>('JWT_SECRET_KEY');
+    if (!secretOrKey) {
+      throw new Error('JWT_SECRET_KEY нет в конфиге');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET_KEY,
+      secretOrKey: secretOrKey,
       passReqToCallback: false,
-    } as StrategyOptions);
+    } satisfies StrategyOptionsWithoutRequest);
   }
 
   async validate(payload: { id: number }) {
@@ -30,6 +36,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
-    return user;
+    const { password: _, ...safeUser } = user;
+
+    return safeUser;
   }
 }

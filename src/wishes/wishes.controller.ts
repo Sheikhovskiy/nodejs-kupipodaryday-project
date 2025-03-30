@@ -1,18 +1,14 @@
 import {
   Body,
-  ConflictException,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Patch,
   Post,
   Req,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { WishesService } from './wishes.service';
@@ -21,8 +17,6 @@ import { JwtAuthGuard } from '../auth/auth-jwt.guard';
 import { CustomRequest } from '../users/CustomRequest';
 import { WishesMapper } from './dto/wishes.mapper';
 import { UpdateWishDto } from './dto/update-wish.dto';
-import { FindOptionsWhere, Not } from 'typeorm';
-import { Wish } from './entities/wish.entity';
 
 @Controller('wishes')
 export class WishesController {
@@ -35,33 +29,19 @@ export class WishesController {
     @Req() req: CustomRequest,
     @Body() createWishDto: CreateWishDto,
   ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException(`Пользователь не найден`);
-    }
-
-    createWishDto.owner = parseInt(req.user.id);
-
-    return await this.wishesService.create(createWishDto);
+    return await this.wishesService.create(req, createWishDto);
   }
 
   @Get('/last')
   async getLastWish() {
-    const wishes = await this.wishesService.findAll({
-      order: { createdAt: 'DESC' },
-      take: 40,
-      relations: ['owner'],
-    });
+    const wishes = await this.wishesService.getLastWish();
 
     return WishesMapper.fromWishListToResponseWishListDto(wishes);
   }
 
   @Get('/top')
   async getTop() {
-    const wishes = await this.wishesService.findAll({
-      order: { copied: 'DESC' },
-      take: 10,
-      relations: ['owner'],
-    });
+    const wishes = await this.wishesService.getTop();
 
     return WishesMapper.fromWishListToResponseWishListDto(wishes);
   }
@@ -69,12 +49,7 @@ export class WishesController {
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getById(@Req() req: CustomRequest, @Param('id') id: string) {
-    const wish = await this.wishesService.findOne({
-      where: { id: parseInt(id) },
-      relations: ['owner', 'offers'],
-    });
-
-    if (!wish) return {};
+    const wish = await this.wishesService.getById(req, id);
 
     return WishesMapper.fromWishToResponseWishDto(wish);
   }
@@ -86,77 +61,15 @@ export class WishesController {
     @Param('id') id: string,
     @Body() updateWishDto: UpdateWishDto,
   ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException(`Пользователь не найден`);
-    }
+    const wish = await this.wishesService.update(req, id, updateWishDto);
 
-    const userId = parseInt(req.user.id);
-
-    const existingWish = await this.wishesService.findOne({
-      where: {
-        id: parseInt(id),
-        owner: { id: parseInt(req.user.id) },
-      },
-      relations: ['offers', 'owner'],
-    });
-
-    if (!existingWish) {
-      throw new NotFoundException(`У вас не существует такого желания`);
-    }
-
-    if (existingWish.price !== updateWishDto.price) {
-      if (existingWish?.offers.length > 0) {
-        throw new ConflictException(
-          `Нельзя изменять цену, когда уже есть желающие скинуться`,
-        );
-      }
-    }
-
-    if (updateWishDto.raised && existingWish.raised !== updateWishDto.raised) {
-      throw new ForbiddenException(
-        `Сумма собранных средств формируется автоматически и не может быть изменена`,
-      );
-    }
-
-    const where: FindOptionsWhere<Wish> = {
-      id: parseInt(id),
-      owner: { id: userId },
-    };
-
-    await this.wishesService.updateOne(where, updateWishDto);
-
-    const updatedWish = await this.wishesService.findOne({
-      where: { id: parseInt(id) },
-      relations: ['owner', 'offers', 'offers.user'],
-    });
-
-    if (!updatedWish) return {};
-
-    return WishesMapper.fromWishToResponseWishDto(updatedWish);
+    return WishesMapper.fromWishToResponseWishDto(wish);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async delete(@Req() req: CustomRequest, @Param('id') id: string) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException(`Пользователь не найден`);
-    }
-
-    const wish = await this.wishesService.findOne({
-      where: {
-        id: parseInt(id),
-        owner: { id: parseInt(req.user.id) },
-      },
-      relations: ['owner', 'offers'],
-    });
-
-    if (!wish) return {};
-
-    const deleteQuery: FindOptionsWhere<Wish> = {
-      id: parseInt(id),
-    };
-
-    await this.wishesService.removeOne(deleteQuery);
+    const wish = await this.wishesService.delete(req, id);
     return WishesMapper.fromWishToResponseWishDto(wish);
   }
 
@@ -164,34 +77,6 @@ export class WishesController {
   @Post(':id/copy')
   @HttpCode(HttpStatus.CREATED)
   async copy(@Req() req: CustomRequest, @Param('id') id: string) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException(`Пользователь не найден`);
-    }
-
-    const wish = await this.wishesService.findOne({
-      where: {
-        id: parseInt(id),
-        owner: { id: Not(parseInt(req.user.id)) },
-      },
-    });
-
-    if (!wish) {
-      throw new NotFoundException('Подарок не найден или это ваш собственный');
-    }
-
-    await this.wishesService.updateOne(
-      { id: parseInt(id) },
-      { copied: (wish.copied || 0) + 1 },
-    );
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id: _, owner: __, ...wishData } = wish;
-
-    const createWishDto: CreateWishDto = {
-      ...wishData,
-      owner: parseInt(req.user.id),
-    };
-
-    return await this.wishesService.create(createWishDto);
+    return await this.wishesService.copy(req, id);
   }
 }

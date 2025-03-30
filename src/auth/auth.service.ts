@@ -28,8 +28,7 @@ export class AuthService {
   }
 
   async register(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 12);
-    createUserDto.password = hashedPassword;
+    createUserDto.password = await bcrypt.hash(createUserDto.password, 12);
     const user = await this.usersSevice.create(createUserDto);
     return UsersMapper.fromUserToSignupUserResponse(user);
   }
@@ -48,8 +47,7 @@ export class AuthService {
       throw new UnauthorizedException(`Некорректная пара логин и пароль`);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userWihoutPassword } = user;
-    return userWihoutPassword;
+    const { password: _, ...safeUser } = user;
+    return safeUser;
   }
 }

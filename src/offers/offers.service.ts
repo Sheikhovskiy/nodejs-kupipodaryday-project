@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FindManyOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,6 +11,7 @@ import { UpdateOfferDto } from './dto/update-offer.dto';
 import { Offer } from './entities/offer.entity';
 import { Wish } from '../wishes/entities/wish.entity';
 import { User } from '../users/entities/user.entity';
+import { CustomRequest } from '../users/CustomRequest';
 
 @Injectable()
 export class OffersService {
@@ -22,7 +24,16 @@ export class OffersService {
     private userRepository: Repository<User>,
   ) {}
 
-  async create(createOfferDto: CreateOfferDto, userId: number): Promise<Offer> {
+  async create(
+    req: CustomRequest,
+    createOfferDto: CreateOfferDto,
+  ): Promise<Offer> {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+
+    const userId = parseInt(req.user.id);
+
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
@@ -70,6 +81,30 @@ export class OffersService {
       user: user,
     });
     return await this.offerRepository.save(offer);
+  }
+
+  async getByOwner(req: CustomRequest) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+
+    return await this.offerRepository.find({
+      where: { user: { id: parseInt(req.user.id) } },
+    });
+  }
+
+  async getById(req: CustomRequest, id: string) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException(`Пользователь не найден`);
+    }
+
+    return await this.offerRepository.findOne({
+      where: {
+        id: parseInt(id),
+        user: { id: parseInt(req.user.id) },
+      },
+      relations: ['owner', 'items'],
+    });
   }
 
   async findOne(query: FindManyOptions<Offer>): Promise<Offer | null> {

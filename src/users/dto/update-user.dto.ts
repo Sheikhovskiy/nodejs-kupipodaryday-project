@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  IsUrl,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -15,6 +16,7 @@ export class UpdateUserDto {
   @Length(1, 200)
   about: string;
 
+  @IsUrl()
   @IsOptional()
   avatar: string;
 

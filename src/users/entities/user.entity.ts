@@ -6,7 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Length } from 'class-validator';
+import { IsOptional, Length } from 'class-validator';
 
 import { Wish } from '../../wishes/entities/wish.entity';
 import { Offer } from '../../offers/entities/offer.entity';
@@ -27,6 +27,7 @@ export class User {
     length: 200,
   })
   @Length(2, 200)
+  @IsOptional()
   about: string;
 
   @Column({
