@@ -4,10 +4,11 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  IsDate,
+  IsDate, IsNumber,
 } from 'class-validator';
 
 export class SignupUserResponse {
+  @IsNumber()
   id: number;
 
   @IsOptional()

@@ -1,11 +1,20 @@
-import { Length, IsOptional, IsString, IsNumber } from 'class-validator';
+import {
+  Length,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsDate,
+} from 'class-validator';
 import { Offer } from '../../offers/entities/offer.entity';
 
 export class UserWishesDto {
+  @IsNumber()
   id: number;
 
+  @IsDate()
   createdAt: Date;
 
+  @IsDate()
   updatedAt: Date;
 
   @Length(1, 250)

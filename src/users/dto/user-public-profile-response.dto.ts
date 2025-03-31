@@ -1,6 +1,13 @@
-import { Length, IsOptional, IsString } from 'class-validator';
+import {
+  Length,
+  IsOptional,
+  IsString,
+  IsDate,
+  IsNumber,
+} from 'class-validator';
 
-export class UserPublicProifleResponse {
+export class UserPublicProfileResponse {
+  @IsNumber()
   id: number;
 
   @IsOptional()
@@ -14,7 +21,9 @@ export class UserPublicProifleResponse {
   @IsOptional()
   avatar: string;
 
+  @IsDate()
   createdAt: Date;
 
+  @IsDate()
   updatedAt: Date;
 }

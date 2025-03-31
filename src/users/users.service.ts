@@ -126,20 +126,8 @@ export class UsersService {
   async findByQuery(findUsersDto: FindUsersDto): Promise<User[]> {
     const query = findUsersDto.query;
 
-    if (query.includes('@')) {
-      const user = await this.userRepository.findOne({
-        where: { email: Like(`%${query}%`) },
-      });
-
-      if (!user) {
-        throw new NotFoundException(`Пользователь по данной почте не найден`);
-      }
-
-      return [user];
-    }
-
     return await this.userRepository.find({
-      where: { username: Like(`%${query}%`) },
+      where: [{ username: Like(`%${query}%`) }, { email: Like(`%${query}%`) }],
     });
   }
 

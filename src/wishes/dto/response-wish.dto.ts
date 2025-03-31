@@ -1,12 +1,21 @@
-import { Length, IsOptional, IsString, IsNumber } from 'class-validator';
+import {
+  Length,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsDate,
+} from 'class-validator';
 import { Offer } from '../../offers/entities/offer.entity';
 import { UserProfileResponseDto } from '../../users/dto/user-profile-response.dto';
 
 export class ResponseWishDto {
+  @IsNumber()
   id: number;
 
+  @IsDate()
   createdAt: Date;
 
+  @IsDate()
   updatedAt: Date;
 
   @Length(1, 250)

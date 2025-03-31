@@ -1,13 +1,15 @@
 import { Wish } from '../../wishes/entities/wish.entity';
-import { IsNumber, IsString } from 'class-validator';
-import { UserPublicProifleResponse } from '../../users/dto/user-public-proifle-response.dto';
+import { IsDate, IsNumber, IsString } from 'class-validator';
+import { UserPublicProfileResponse } from '../../users/dto/user-public-profile-response.dto';
 
 export class ResponseWishlistsDto {
   @IsNumber()
   id: number;
 
+  @IsDate()
   createdAt: Date;
 
+  @IsDate()
   updatedAt: Date;
 
   @IsString()
@@ -16,7 +18,7 @@ export class ResponseWishlistsDto {
   @IsString()
   image: string;
 
-  owner: UserPublicProifleResponse;
+  owner: UserPublicProfileResponse;
 
   items: Wish[];
 }

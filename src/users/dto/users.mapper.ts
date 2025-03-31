@@ -1,6 +1,6 @@
 import { User } from '../entities/user.entity';
 import { UserProfileResponseDto } from './user-profile-response.dto';
-import { UserPublicProifleResponse } from './user-public-proifle-response.dto';
+import { UserPublicProfileResponse } from './user-public-profile-response.dto';
 import { SignupUserResponse } from './signup-user-response.dto';
 
 export class UsersMapper {
@@ -11,7 +11,7 @@ export class UsersMapper {
   }
 
   static fromUserToUserPublicProfileResponseDto(user: User) {
-    const userPublicProfileResponseDto = new UserPublicProifleResponse();
+    const userPublicProfileResponseDto = new UserPublicProfileResponse();
 
     userPublicProfileResponseDto.id = user.id;
     userPublicProfileResponseDto.username = user.username;

@@ -5,9 +5,11 @@ import {
   IsString,
   IsDate,
   IsUrl,
+  IsNumber,
 } from 'class-validator';
 
 export class UserProfileResponseDto {
+  @IsNumber()
   id: number;
 
   @IsOptional()
